@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Pie Chart</title>
+
+	<script src="https://d3js.org/d3.v3.min.js"></script>
+	<script src='https://d3js.org/d3.v4.min.js'></script>
+	<script src='https://d3js.org/d3-scale-chromatic.v1.min.js'></script>
+	<style>
+		.container {
+			margin: 10px;
+			text-align: center;
+		}
+
+		.inputContainer {
+			margin: 10px;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="container">
+		<div id="pie"></div>
+		<div class='inputContainer'>
+			<input type="text" id="label" placeholder="Label" />
+			<input type="text" id="value" placeholder="Value" />
+			<input type="submit" id="submit" value="Add" />
+		</div>
+	</div>
+	<script>
+		const keys = [];
+		const values = []
+		let index = 0;
+
+		const width = 700;
+		const height = 400;
+		const radius = Math.min(width, height) / 2;
+
+		// draw canvas
+		const svg = d3.select("#pie")
+			.append("svg")
+			.attr("width", width)
+			.attr("height", height)
+			.append("g")
+			.attr("transform", `translate(${width / 2}, ${height / 2})`);
+
+		svg.append("g").attr("class", "slices");
+		svg.append("g").attr("class", "labels");
+
+		const pie = d3.layout.pie()
+			.sort(null)
+			.value(function (d) {
+				return d.value;
+			});
+
+		const arc = d3.arc()
+			.outerRadius(radius * 1.0)
+			.innerRadius(radius * 0.3);
+
+		const key = function (d) { return d.data.label; };
+
+		const color = d3.scaleOrdinal(d3.schemePastel1)
+			.domain([0, 10]);
+
+		// Add value to data array
+		function addData() {
+
+			values[index] = Number(document.getElementById('value').value);
+			keys[index] = document.getElementById('label').value;
+
+			document.getElementById('value').value = '';
+			document.getElementById('label').value = '';
+
+			let data = [];
+			for (i = 0; i < values.length; i++) {
+				data.push({ label: keys[i], value: values[i] });
+			}
+			index++;
+			return data;
+		}
+		//update([]);
+
+		// Set onClick button
+		d3.select("#submit")
+			.on("click", function () {
+				update(addData());
+			});
+
+		function update(data) {
+			// data slices 
+			const slice = svg.select(".slices").selectAll("path.slice")
+				.data(pie(data), key);
+
+			slice.enter()
+				.insert("path")
+				.attr("d", arc)
+				.style("fill", (d, i) => color(i))
+				.attr("class", "slice")
+				.transition().duration(1000)
+				.each(function (d) {
+					this._current = {
+						startAngle: d.startAngle
+					}
+				});
+
+			slice
+				.transition().duration(1000)
+				.attrTween("d", function (d) {
+					this._current = this._current || d;
+					var interpolate = d3.interpolate(this._current, d);
+					this._current = interpolate(0);
+					return function (t) {
+						return arc(interpolate(t));
+					};
+				})
+
+			slice.exit()
+				.remove();
+
+			//key
+			const squares = svg.selectAll("rect")
+				.data(keys)
+
+			squares.enter()
+				.append("rect")
+				.attr("x", 220)
+				.attr("y", (d, i) => -(150 - (i + 1) * 20))
+				.attr("width", 10)
+				.attr("height", 10)
+				.attr("fill", (d, i) => color(i))
+
+			svg.selectAll("text")
+				.data(keys)
+				.enter()
+				.append("text")
+				.text(d => d)
+				.attr("x", 235)
+				.attr("y", (d, i) => -(140 - (i + 1) * 20))
+
+		};
+
+	</script>
+</body>
+
+</html>
